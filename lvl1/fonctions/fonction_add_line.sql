@@ -1,4 +1,4 @@
--- Fonction pour ajouter une nouvelle ligne-- Fonction pour ajouter une nouvelle ligne
+-- Fonction pour ajouter une nouvelle ligne
 CREATE OR REPLACE FUNCTION add_line(
     id VARCHAR(3),
     l_type VARCHAR(3),
