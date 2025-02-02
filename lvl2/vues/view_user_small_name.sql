@@ -1,4 +1,4 @@
--- Création de la vue view_user_small_name
+-- Création de la vue view_user_small_name voyageurs composé de 4 caractères ou moins
 CREATE OR REPLACE VIEW view_user_small_name AS
 SELECT
     nom AS last_name,
