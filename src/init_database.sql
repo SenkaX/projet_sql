@@ -121,3 +121,14 @@ CREATE TABLE abonnements (
     statut VARCHAR(15) CONSTRAINT statut_actif CHECK (statut IN ('Registered', 'Pending', 'Incomplete')),
     date_abonnement DATE NOT NULL
 );
+
+-- Table Factures
+CREATE TABLE factures (
+    id SERIAL PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    FOREIGN KEY (utilisateur_id) REFERENCES voyageurs (id),
+    annee INT NOT NULL,
+    mois INT NOT NULL,
+    montant NUMERIC(10, 2) NOT NULL,
+    UNIQUE (utilisateur_id, annee, mois)
+);
