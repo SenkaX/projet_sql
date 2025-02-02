@@ -63,7 +63,7 @@ CREATE TABLE voyageurs (
 
 -- Table Employés
 CREATE TABLE employes (
-    utilisateur_id INT,
+    utilisateur_id INT PRIMARY KEY,
     FOREIGN KEY (utilisateur_id) REFERENCES voyageurs(id),
     login VARCHAR(20) NOT NULL UNIQUE
 );

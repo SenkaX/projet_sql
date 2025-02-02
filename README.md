@@ -33,7 +33,7 @@ Cette base de données permet une gestion efficace des transports en reliant les
 
 Voici le diagramme de la base de données en utilisant **dbdiagram.io**.
 
-![Diagramme DB](./Capture%20d'%C3%A9cran%202025-02-02%20154530.png)
+![Diagramme DB](./Capture%20d'%C3%A9cran%202025-02-02%20191516.png)
 
 
 ## Schéma de la Base de Données
