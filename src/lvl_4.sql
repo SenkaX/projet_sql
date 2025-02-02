@@ -118,7 +118,7 @@ BEGIN
         RETURN TRUE;
     END IF;
 
-    -- Insérer la nouvelle facture
+ 
     INSERT INTO factures (utilisateur_id, annee, mois, montant)
     VALUES (user_id, year, month, total_cost);
 
@@ -138,21 +138,21 @@ DECLARE
     facture_id INT;
     total_cost NUMERIC;
 BEGIN
-    -- Vérifier si l'utilisateur existe
+    
     SELECT v.id INTO user_id FROM voyageurs v WHERE v.email = email;
     IF NOT FOUND THEN
         RAISE NOTICE 'Utilisateur non trouvé';
         RETURN FALSE;
     END IF;
 
-    -- Vérifier si la facture existe
+   
     SELECT f.id, f.montant INTO facture_id, total_cost
     FROM factures f
     WHERE f.utilisateur_id = user_id
       AND f.annee = year
       AND f.mois = month;
 
-    -- Si la facture n'existe pas, la créer
+   
     IF NOT FOUND THEN
         PERFORM add_bill(email, year, month);
         SELECT f.id, f.montant INTO facture_id, total_cost
@@ -162,13 +162,13 @@ BEGIN
           AND f.mois = month;
     END IF;
 
-    -- Vérifier si le montant total de la facture est nul
+   
     IF total_cost = 0 THEN
         RAISE NOTICE 'Montant total de la facture est nul';
         RETURN FALSE;
     END IF;
 
-    -- Vérifier si la facture a déjà été payée
+    
     IF EXISTS (
         SELECT 1
         FROM paiements p
@@ -196,17 +196,17 @@ DECLARE
     user_email VARCHAR(128);
     bill_success BOOLEAN;
 BEGIN
-    -- Vérifier si le mois est terminé
+    
     IF date_trunc('month', CURRENT_DATE) <= make_date(year, month, 1) THEN
         RAISE NOTICE 'Le mois n''est pas terminé';
         RETURN FALSE;
     END IF;
 
-    -- Boucle sur tous les utilisateurs
+    
     FOR user_email IN
         SELECT email FROM voyageurs
     LOOP
-        -- Appeler la fonction add_bill pour chaque utilisateur et vérifier le succès
+        
         bill_success := add_bill(user_email, year, month);
         IF NOT bill_success THEN
             RAISE NOTICE 'Échec de la génération de la facture pour %', user_email;
