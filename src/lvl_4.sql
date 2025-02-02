@@ -52,20 +52,17 @@ DECLARE
     trajets_cost NUMERIC := 0;
     abonnements_cost NUMERIC := 0;
 BEGIN
-    -- Vérifier que l'utilisateur existe et obtenir son ID
     SELECT v.id INTO user_id FROM voyageurs v WHERE v.email = user_email;
     IF NOT FOUND THEN
         RAISE NOTICE 'Utilisateur non trouvé';
         RETURN FALSE;
     END IF;
 
-    -- Vérifier que le mois est terminé
     IF date_trunc('month', CURRENT_DATE) <= make_date(year, month, 1) THEN
         RAISE NOTICE 'Le mois n''est pas terminé';
         RETURN FALSE;
     END IF;
 
-    -- Vérifier qu'il n'y a pas de doublons de factures pour le même mois, la même année et le même utilisateur
     IF EXISTS (
         SELECT 1
         FROM factures f
@@ -77,7 +74,6 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    -- Calculer le coût total des trajets pour le mois et l'année spécifiés
     SELECT COALESCE(SUM(f.prix_mensuel), 0) INTO trajets_cost
     FROM trajets t
     JOIN abonnements a ON t.utilisateur_id = a.utilisateur_id
@@ -88,7 +84,6 @@ BEGIN
 
     RAISE NOTICE 'Coût des trajets: %', trajets_cost;
 
-    -- Ajouter le coût des abonnements en cours
     SELECT COALESCE(SUM(f.prix_mensuel), 0) INTO abonnements_cost
     FROM abonnements a
     JOIN forfaits f ON a.forfait_id = f.id
@@ -99,12 +94,10 @@ BEGIN
 
     RAISE NOTICE 'Coût des abonnements: %', abonnements_cost;
 
-    -- Calculer le coût total
     total_cost := trajets_cost + abonnements_cost;
 
     RAISE NOTICE 'Coût total avant réduction: %', total_cost;
 
-    -- Vérifier si l'utilisateur est salarié et appliquer la réduction
     SELECT COALESCE(MAX(cs.reduction_pourcent), 0) INTO reduction
     FROM employes e
     JOIN contrats c ON e.utilisateur_id = c.employe_id
@@ -114,15 +107,12 @@ BEGIN
 
     RAISE NOTICE 'Réduction: %', reduction;
 
-    -- Appliquer la réduction
     total_cost := total_cost * (1 - reduction / 100);
 
-    -- Arrondir le total à 2 décimales
     total_cost := ROUND(total_cost, 2);
 
     RAISE NOTICE 'Coût total après réduction: %', total_cost;
 
-    -- Si le montant total de la facture est nul, retourner true
     IF total_cost = 0 THEN
         RAISE NOTICE 'Montant total de la facture est nul';
         RETURN TRUE;
@@ -135,3 +125,4 @@ BEGIN
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql;
+

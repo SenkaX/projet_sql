@@ -132,3 +132,10 @@ CREATE TABLE factures (
     montant NUMERIC(10, 2) NOT NULL,
     UNIQUE (utilisateur_id, annee, mois)
 );
+-- Table Paiements
+CREATE TABLE paiements (
+    id SERIAL PRIMARY KEY,
+    facture_id INT NOT NULL,
+    FOREIGN KEY (facture_id) REFERENCES factures (id),
+    date_paiement DATE NOT NULL
+);
