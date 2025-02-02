@@ -109,7 +109,7 @@ BEGIN
 
     total_cost := total_cost * (1 - reduction / 100);
 
-    total_cost := ROUND(total_cost, 2);
+    total_cost := TRUNC(total_cost, 2);
 
     RAISE NOTICE 'Coût total après réduction: %', total_cost;
 
@@ -125,4 +125,177 @@ BEGIN
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Fonction pour indiquer qu'une facture a été payée
+CREATE OR REPLACE FUNCTION pay_bill(
+    email VARCHAR(128),
+    year INT,
+    month INT
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    user_id INT;
+    facture_id INT;
+    total_cost NUMERIC;
+BEGIN
+    -- Vérifier si l'utilisateur existe
+    SELECT v.id INTO user_id FROM voyageurs v WHERE v.email = email;
+    IF NOT FOUND THEN
+        RAISE NOTICE 'Utilisateur non trouvé';
+        RETURN FALSE;
+    END IF;
+
+    -- Vérifier si la facture existe
+    SELECT f.id, f.montant INTO facture_id, total_cost
+    FROM factures f
+    WHERE f.utilisateur_id = user_id
+      AND f.annee = year
+      AND f.mois = month;
+
+    -- Si la facture n'existe pas, la créer
+    IF NOT FOUND THEN
+        PERFORM add_bill(email, year, month);
+        SELECT f.id, f.montant INTO facture_id, total_cost
+        FROM factures f
+        WHERE f.utilisateur_id = user_id
+          AND f.annee = year
+          AND f.mois = month;
+    END IF;
+
+    -- Vérifier si le montant total de la facture est nul
+    IF total_cost = 0 THEN
+        RAISE NOTICE 'Montant total de la facture est nul';
+        RETURN FALSE;
+    END IF;
+
+    -- Vérifier si la facture a déjà été payée
+    IF EXISTS (
+        SELECT 1
+        FROM paiements p
+        WHERE p.facture_id = facture_id
+    ) THEN
+        RAISE NOTICE 'Facture déjà payée';
+        RETURN TRUE;
+    END IF;
+
+    -- Insérer le paiement
+    INSERT INTO paiements (facture_id, date_paiement)
+    VALUES (facture_id, CURRENT_DATE);
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Fonction pour générer des factures pour tous les utilisateurs
+CREATE OR REPLACE FUNCTION generate_bill(
+    year INT,
+    month INT
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    user_email VARCHAR(128);
+    bill_success BOOLEAN;
+BEGIN
+    -- Vérifier si le mois est terminé
+    IF date_trunc('month', CURRENT_DATE) <= make_date(year, month, 1) THEN
+        RAISE NOTICE 'Le mois n''est pas terminé';
+        RETURN FALSE;
+    END IF;
+
+    -- Boucle sur tous les utilisateurs
+    FOR user_email IN
+        SELECT email FROM voyageurs
+    LOOP
+        -- Appeler la fonction add_bill pour chaque utilisateur et vérifier le succès
+        bill_success := add_bill(user_email, year, month);
+        IF NOT bill_success THEN
+            RAISE NOTICE 'Échec de la génération de la facture pour %', user_email;
+        END IF;
+    END LOOP;
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Vues lvl_4
+
+-- Création de la vue view_all_bilss
+CREATE OR REPLACE VIEW view_all_bills AS
+SELECT 
+    v.nom AS lastname,
+    v.prenom AS firstname,
+    f.id AS bill_number,
+    f.montant AS bill_amount
+FROM 
+    factures f
+JOIN 
+    voyageurs v ON f.utilisateur_id = v.id
+ORDER BY 
+    f.id;
+
+-- Création de la vue view_bill_per_month
+CREATE OR REPLACE VIEW view_bill_per_month AS
+SELECT 
+    annee AS year,
+    mois AS month,
+    COUNT(*) AS bills,
+    SUM(montant) AS total
+FROM 
+    factures
+GROUP BY 
+    annee, mois
+HAVING 
+    COUNT(*) > 0
+ORDER BY 
+    annee, mois;
+
+-- Création de la vue view_average_entries_station
+CREATE OR REPLACE VIEW view_average_entries_station AS
+SELECT 
+    t.nom AS type,
+    s.nom AS station,
+    TRUNC(AVG(entries.count), 2) AS entries
+FROM 
+    (SELECT 
+        station_entree_id, 
+        COUNT(*) AS count
+     FROM 
+        trajets
+     GROUP BY 
+        station_entree_id, date_trunc('day', date_entree)
+    ) AS entries
+JOIN 
+    stations s ON entries.station_entree_id = s.id
+JOIN 
+    stations_lignes sl ON s.id = sl.station_id
+JOIN 
+    lignes l ON sl.ligne_id = l.id
+JOIN 
+    transport t ON l.moyen_transport_id = t.id
+GROUP BY 
+    t.nom, s.nom
+ORDER BY 
+    t.nom, s.nom;
+
+-- Création de la vue view_current_non_paid_bills
+CREATE OR REPLACE VIEW view_current_non_paid_bills AS
+SELECT 
+    v.nom AS lastname,
+    v.prenom AS firstname,
+    f.id AS bill_number,
+    f.montant AS bill_amount
+FROM 
+    factures f
+JOIN 
+    voyageurs v ON f.utilisateur_id = v.id
+WHERE 
+    NOT EXISTS (
+        SELECT 1 
+        FROM paiements p 
+        WHERE p.facture_id = f.id
+    )
+ORDER BY 
+    v.nom, v.prenom, f.id;
+
+
 
