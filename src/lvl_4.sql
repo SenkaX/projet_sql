@@ -30,7 +30,7 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    -- Insérer le nouveau trajet
+    
     INSERT INTO trajets (utilisateur_id, station_entree_id, station_sortie_id, date_entree, date_sortie)
     VALUES (user_id, station_start, station_end, time_start, time_end);
 
